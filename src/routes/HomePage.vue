@@ -1,6 +1,6 @@
 <template>
   <main class="mx-auto max-w-5xl px-4 py-8">
-    <header class="mb-6">
+    <header class="mb-6 flex flex-col gap-3 sm:flex-row">
       <label for="league-search" class="sr-only">Search leagues</label>
       <input
         id="league-search"
@@ -9,6 +9,7 @@
         placeholder="Search leagues…"
         class="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-white placeholder-gray-500 focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/40"
       />
+      <SportSelect v-model="sportFilter" :sports="sports" />
     </header>
 
     <p
@@ -48,24 +49,31 @@ import type { League, Season } from '@/types/sports'
 import BaseLeague from '@/components/BaseLeague.vue'
 import DrawerDialog from '@/components/DrawerDialog.vue'
 import SeasonBadge from '@/components/SeasonBadge.vue'
+import SportSelect from '@/components/SportSelect.vue'
 
 const leagues = ref<League[]>([])
 const selectedSeason = ref<Season | null>(null)
 const errorMessage = ref<string | null>(null)
 const searchTerm = ref('')
+const sportFilter = ref('all')
 const isLoading = ref(true)
 const isBadgeOpen = ref(false)
 const isSeasonLoading = ref(false)
 
+const sports = computed(() =>
+  [...new Set(leagues.value.map((l) => l.strSport))].filter(Boolean).sort(),
+)
+
 const filteredLeagues = computed(() => {
   const query = searchTerm.value.trim().toLowerCase()
-  if (!query) return leagues.value
 
-  return leagues.value.filter((league) =>
-    [league.strLeague, league.strLeagueAlternate, league.strSport].some((field) =>
+  return leagues.value.filter((league) => {
+    if (sportFilter.value !== 'all' && league.strSport !== sportFilter.value) return false
+    if (!query) return true
+    return [league.strLeague, league.strLeagueAlternate, league.strSport].some((field) =>
       field?.toLowerCase().includes(query),
-    ),
-  )
+    )
+  })
 })
 
 onMounted(async () => {
