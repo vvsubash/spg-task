@@ -26,14 +26,26 @@
       {{ searchTerm ? `No leagues match “${searchTerm}”.` : 'No leagues found.' }}
     </p>
 
-    <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
-      <BaseLeague
-        v-for="league in filteredLeagues"
-        :key="league.idLeague"
-        v-bind="league"
-        @fetch-season-badge="openSeasonBadge"
-      />
-    </div>
+    <MotionConfig v-else reduced-motion="user">
+      <div class="relative grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
+        <AnimatePresence mode="popLayout">
+          <motion.div
+            v-for="(league, index) in filteredLeagues"
+            :key="league.idLeague"
+            layout="position"
+            :custom="index"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            :variants="leagueCardVariants"
+            :transition="leagueLayoutTransition"
+            class="h-full"
+          >
+            <BaseLeague v-bind="league" class="h-full" @fetch-season-badge="openSeasonBadge" />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </MotionConfig>
 
     <DrawerDialog v-model:open="isBadgeOpen" title="Season badge">
       <SeasonBadge :season="selectedSeason" :loading="isSeasonLoading" />
@@ -42,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import { AnimatePresence, MotionConfig, motion, type VariantType } from 'motion-v'
 import { computed, onMounted, ref } from 'vue'
 
 import { fetchLeagues, fetchSeasonBadge } from '@/api'
@@ -59,6 +72,34 @@ const sportFilter = ref('all')
 const isLoading = ref(true)
 const isBadgeOpen = ref(false)
 const isSeasonLoading = ref(false)
+
+const leagueCardVariants: Record<string, VariantType | ((custom: unknown) => VariantType)> = {
+  hidden: { opacity: 0, scale: 0.98, y: 12 },
+  visible: (custom) => {
+    const index = typeof custom === 'number' ? custom : 0
+
+    return {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: {
+        duration: 0.22,
+        delay: Math.min(index, 6) * 0.04,
+        ease: [0.16, 1, 0.3, 1],
+      },
+    }
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.98,
+    y: -8,
+    transition: { duration: 0.14, ease: 'easeIn' },
+  },
+}
+
+const leagueLayoutTransition = {
+  layout: { duration: 0.24, ease: [0.16, 1, 0.3, 1] },
+}
 
 const sports = computed(() =>
   [...new Set(leagues.value.map((l) => l.strSport))].filter(Boolean).sort(),
